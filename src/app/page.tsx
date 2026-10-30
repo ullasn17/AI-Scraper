@@ -22,26 +22,33 @@ import {
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  await connectDB();
+  let popularSchemes: any[] = [];
+  let totalVerifiedCount = 0;
 
-  // Get all enabled source IDs
-  const enabledSources = await Source.find({ isEnabled: true }, { _id: 1 }).lean();
-  const enabledSourceIds = enabledSources.map((s) => s._id);
+  try {
+    await connectDB();
 
-  // Fetch popular / verified schemes from enabled sources
-  const popularSchemes = await Scheme.find({
-    verificationStatus: 'VERIFIED',
-    sourceId: { $in: enabledSourceIds },
-  })
-    .sort({ version: -1, createdAt: -1 })
-    .limit(6)
-    .lean();
+    // Get all enabled source IDs
+    const enabledSources = await Source.find({ isEnabled: true }, { _id: 1 }).lean();
+    const enabledSourceIds = enabledSources.map((s) => s._id);
 
-  // Total verified count for enabled sources
-  const totalVerifiedCount = await Scheme.countDocuments({
-    verificationStatus: 'VERIFIED',
-    sourceId: { $in: enabledSourceIds },
-  });
+    // Fetch popular / verified schemes from enabled sources
+    popularSchemes = await Scheme.find({
+      verificationStatus: 'VERIFIED',
+      sourceId: { $in: enabledSourceIds },
+    })
+      .sort({ version: -1, createdAt: -1 })
+      .limit(6)
+      .lean();
+
+    // Total verified count for enabled sources
+    totalVerifiedCount = await Scheme.countDocuments({
+      verificationStatus: 'VERIFIED',
+      sourceId: { $in: enabledSourceIds },
+    });
+  } catch (error) {
+    console.error('[HomePage] Error loading schemes from MongoDB:', error);
+  }
 
   const categories = [
     { id: 'EDUCATION', label: 'Education & Scholarships', icon: GraduationCap, color: 'text-blue-600', bg: 'bg-blue-50' },

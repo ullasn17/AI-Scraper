@@ -28,17 +28,18 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
   const uri = process.env.MONGODB_URI;
 
   if (!uri) {
-    throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
+    console.error('[MongoDB Error] MONGODB_URI environment variable is missing in Vercel settings!');
+    throw new Error('Please define the MONGODB_URI environment variable in Vercel');
   }
 
-  if (cached.conn) {
+  if (cached.conn && mongoose.connection.readyState === 1) {
     return cached.conn;
   }
 
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
-      serverSelectionTimeoutMS: 10000,
+      serverSelectionTimeoutMS: 8000,
       maxPoolSize: 10,
     };
 
@@ -51,6 +52,7 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
     cached.conn = await cached.promise;
   } catch (e) {
     cached.promise = null;
+    console.error('[MongoDB Error] Failed to connect to MongoDB Atlas:', e);
     throw e;
   }
 
