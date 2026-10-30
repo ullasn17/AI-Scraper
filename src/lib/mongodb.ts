@@ -1,4 +1,14 @@
 import mongoose from 'mongoose';
+import dns from 'dns';
+
+try {
+  // Prevent SRV ECONNREFUSED lookup failures on Windows local environments
+  if (process.platform === 'win32') {
+    dns.setServers(['8.8.8.8', '1.1.1.1']);
+  }
+} catch {
+  // Ignore in sandboxed or serverless environments where custom DNS servers cannot be set
+}
 
 interface MongooseCache {
   conn: typeof mongoose | null;
