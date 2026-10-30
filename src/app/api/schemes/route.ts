@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import { Scheme } from '@/models/Scheme';
 import { Source } from '@/models/Source';
-import { buildSmartSearchFilter } from '@/lib/search/smartSearch';
+import { buildSmartSearchFilter, rankSchemesByRelevance } from '@/lib/search/smartSearch';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +28,13 @@ export async function GET(req: NextRequest) {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const conditions: any[] = [
-      { sourceId: { $in: enabledSourceIds } }
+      {
+        $or: [
+          { sourceId: { $in: enabledSourceIds } },
+          { sourceId: { $exists: false } },
+          { sourceId: null }
+        ]
+      }
     ];
 
     if (verificationStatus !== 'ALL') {
@@ -78,14 +84,19 @@ export async function GET(req: NextRequest) {
     }
 
     const total = await Scheme.countDocuments(filter);
-    const schemes = await Scheme.find(filter)
+    let schemes = await Scheme.find(filter)
       .sort(sortOptions)
-      .skip((page - 1) * limit)
-      .limit(limit)
       .lean();
 
+    // If a search query is active, rank results by smart relevance score
+    if (query && schemes.length > 0) {
+      schemes = rankSchemesByRelevance(schemes, query);
+    }
+
+    const paginatedSchemes = schemes.slice((page - 1) * limit, page * limit);
+
     return NextResponse.json({
-      schemes,
+      schemes: paginatedSchemes,
       pagination: {
         total,
         page,

@@ -33,9 +33,17 @@ export default async function HomePage() {
     const enabledSourceIds = enabledSources.map((s) => s._id);
 
     // Fetch popular / verified schemes from enabled sources
+    const sourceFilter = {
+      $or: [
+        { sourceId: { $in: enabledSourceIds } },
+        { sourceId: { $exists: false } },
+        { sourceId: null }
+      ]
+    };
+
     popularSchemes = await Scheme.find({
       verificationStatus: 'VERIFIED',
-      sourceId: { $in: enabledSourceIds },
+      ...sourceFilter,
     })
       .sort({ version: -1, createdAt: -1 })
       .limit(6)
@@ -44,7 +52,7 @@ export default async function HomePage() {
     // Total verified count for enabled sources
     totalVerifiedCount = await Scheme.countDocuments({
       verificationStatus: 'VERIFIED',
-      sourceId: { $in: enabledSourceIds },
+      ...sourceFilter,
     });
   } catch (error) {
     console.error('[HomePage] Error loading schemes from MongoDB:', error);

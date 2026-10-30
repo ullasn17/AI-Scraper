@@ -15,7 +15,8 @@ import {
   AlertCircle,
   ExternalLink,
   Calendar,
-  Clock
+  Clock,
+  X
 } from 'lucide-react';
 
 interface SchemeItem {
@@ -144,10 +145,23 @@ function SchemeExplorerContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category, state, governmentLevel, sortBy, ongoingOnly, page]);
 
+  // When user clears the search bar completely, automatically refresh the list
+  useEffect(() => {
+    if (query === '') {
+      fetchSchemes();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(1);
     fetchSchemes();
+  };
+
+  const handleClearQuery = () => {
+    setQuery('');
+    setPage(1);
   };
 
   const handleBookmarkToggle = async (schemeId: string) => {
@@ -238,8 +252,18 @@ function SchemeExplorerContent() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search scheme name, ministry, benefits, or keywords..."
-              className="w-full pl-10 pr-4 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0d9488] text-slate-900"
+              className="w-full pl-10 pr-9 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0d9488] text-slate-900"
             />
+            {query && (
+              <button
+                type="button"
+                onClick={handleClearQuery}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full"
+                title="Clear search"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
           <button
             type="submit"

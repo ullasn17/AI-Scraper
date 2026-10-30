@@ -1112,9 +1112,33 @@ async function seed() {
     },
   ];
 
+  const dbSources = await Source.find().lean();
+
   for (const s of seedSchemes) {
     const slug = generateSlug(s.name);
     const contentHash = computeContentHash(s.name + s.summary + s.description);
+
+    let matchedSourceId = undefined;
+    if (s.officialSourceUrl) {
+      try {
+        const schemeHost = new URL(s.officialSourceUrl).hostname.toLowerCase();
+        const matched = dbSources.find((src) => {
+          if (!src.baseUrl) return false;
+          try {
+            const srcHost = new URL(src.baseUrl).hostname.toLowerCase();
+            return schemeHost === srcHost || schemeHost.endsWith('.' + srcHost) || srcHost.endsWith('.' + schemeHost);
+          } catch {
+            return false;
+          }
+        });
+        if (matched) matchedSourceId = matched._id;
+      } catch {}
+    }
+
+    if (!matchedSourceId) {
+      const fallback = dbSources.find((src) => src.governmentLevel === s.governmentLevel) || dbSources[0];
+      if (fallback) matchedSourceId = fallback._id;
+    }
 
     await Scheme.findOneAndUpdate(
       { slug },
@@ -1123,6 +1147,7 @@ async function seed() {
           ...s,
           slug,
           contentHash,
+          sourceId: matchedSourceId,
           version: 1,
           lastCheckedAt: new Date(),
           confidenceScore: 95,
